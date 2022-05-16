@@ -1,0 +1,3 @@
+sold/trans de transacciones totales o del listing?
+
+columna T("Close")?
