@@ -1,13 +1,22 @@
-
 import os
+os.system('py -m pip install -r requirements.txt')
 import re
+from datetime import datetime
 from openpyxl import load_workbook
 from lxml import html
-from datetime import datetime
 
-DESTINATIONS = ('Worldwide', 'European Union', 'United Kingdom')
 EXCEL_FILE = 'data.xlsx'
 LISTINGS_PATH = './listings'
+DESTINATIONS = ('Worldwide', 'European Union', 'United Kingdom')
+ASAP_XPATHS = {
+    'vendor': '//label[contains(text(),"Vendor:")]/../../td/a/text()',
+    'reference': '//a[contains(text(),"Positive")]/@href',
+    'title': '/html/body/div/div[3]/div/div[1]/h4/text()',
+    'price': '//label[contains(text(), "Price:")]/../../td/text()',
+    's_from': '//label[contains(text(), "Ships from:")]/../../td/text()',
+    's_to': '//label[contains(text(), "Ships to:")]/../../td/text()',
+    'description': '//h5[contains(text(),"Description")]/../div/text()'
+}
 COLUMN = {
     'MARKET_COL': 'A',
     'DATE_COL': 'B',
@@ -23,23 +32,22 @@ COLUMN = {
     'DESCRIPTION_COL': 'L'
 }
 
-ASAP_XPATHS = {
-    'vendor': '//label[contains(text(),"Vendor:")]/../../td/a/text()',
-    # 'url': url,
-    # 'title': title,
-    # 'quantity': quantity,
-    # 'price': price,
-    # 's_from': s_from,
-    # 's_to': s_to,
-    # 'description': description
-}
+class Listing:
+    pass
+
+class Market:
+    
+    def __init__(self, market_n):
+        self.marketN = market_n
+    
+    def whichMarket(self):
+        print(f'Nombre: {self.marketN}')
+asap_market = Market('ASAP Market')
+asap_market.whichMarket()
 
 html_files = []
 for (dirpath, dirname, filenames) in os.walk(LISTINGS_PATH):
-    i = 0
     for file_name in filenames:
-        i += 1
-        # print(f'{i} {file_name}')
         file_path = os.path.join(os.path.abspath(dirpath), file_name)
         html_files.append(file_path)
 
@@ -47,28 +55,21 @@ i = 0
 listings = []
 for file in html_files:
     tree = html.parse(file)
-
-    market = file.strip('.htm')
-
+    market = re.search(r'(\w* Market)\.htm', file)[1]
     date = datetime.today().strftime('%d-%b-%Y')
-
-    vendor = tree.xpath('//label[contains(text(),"Vendor:")]/../../td/a/text()')[0]
-    vendor = re.search(r'\w* ', vendor).group(0)
+    vendor = tree.xpath(ASAP_XPATHS['vendor'])[0]
+    vendor = re.search(r'\w* ', vendor)[0]
     vendor = vendor[:-1]
-
-    reference = tree.xpath('//a[contains(text(),"Positive")]/@href')[0]
-    reference = re.search(r'\/*.*\/', reference)
+    reference = tree.xpath(ASAP_XPATHS['reference'])[0]
+    reference = re.search(r'\/*.*\/', reference)[0]
     url = f'http://asap2u4pvplnkzl7ecle45wajojnftja45wvovl3jrvhangeyq67ziid.onion{reference}'
-
-    title = tree.xpath('/html/body/div/div[3]/div/div[1]/h4/text()')[0]
-
+    title = tree.xpath(ASAP_XPATHS['title'])[0]
     quantity = re.search(r'\d+\s*[gG]+', title)
     if not quantity:
         quantity = '!!!no quantity'
     else:
-        quantity = re.search(r'\d+', quantity[0])[0] + 'g'
-
-    price = tree.xpath('//label[contains(text(), "Price:")]/../../td/text()')
+        quantity = re.search(r'\d+', quantity[0])[0] + ' g'
+    price = tree.xpath(ASAP_XPATHS['price'])
     if not price:
         price = '!!!no price'
     else:
@@ -78,13 +79,17 @@ for file in html_files:
         else:
             label_currency = re.search(r'\w{3}', price)[0]
             price = f'({label_currency}) {price}'
-
-    s_from = tree.xpath('//label[contains(text(), "Ships from:")]/../../td/text()')[0]
-    s_to = tree.xpath('//label[contains(text(), "Ships to:")]/../../td/text()')[0]
-
-    description = tree.xpath('//h5[contains(text(),"Description")]/../div/text()')[0]
+    s_from = tree.xpath(ASAP_XPATHS['s_from'])[0]
+    s_to = tree.xpath(ASAP_XPATHS['s_to'])[0]
+    description = tree.xpath(ASAP_XPATHS['description'])[0]
+    # print(file)
+    # print(title)
+    # print(quantity)
+    # print(vendor)
+    # print(price + '\n')
 
     listing = {
+        'market': market,
         'date': date,
         'vendor': vendor,
         'url': url,
@@ -95,10 +100,6 @@ for file in html_files:
         's_to': s_to,
         'description': description
             }
-    print(title)
-    print(quantity)
-    print(vendor)
-    print(price + '\n')
     listings.append(listing)
 
 wb = load_workbook(filename=EXCEL_FILE)
@@ -111,3 +112,5 @@ for listing in listings:
         coordinate = f'{COLUMN[col]}{row_n}'
         sheet[coordinate] = listing[key]
 wb.save(filename=EXCEL_FILE)
+
+# debajo de listings, otro para listings de otros países
