@@ -7,12 +7,15 @@ from lxml import html
 
 EXCEL_FILE = 'data.xlsx'
 LISTINGS_PATH = './listings'
-DESTINATIONS = ('Worldwide', 'European Union', 'United Kingdom')
+# DESTINATIONS = ('Worldwide', 'European Union', 'United Kingdom')
 ASAP_XPATHS = {
     'vendor': '//label[contains(text(),"Vendor:")]/../../td/a/text()',
     'reference': '//a[contains(text(),"Positive")]/@href',
     'title': '/html/body/div/div[3]/div/div[1]/h4/text()',
     'price': '//label[contains(text(), "Price:")]/../../td/text()',
+    't_feedback': '//a[contains(text(), "Total")]/span/text()',
+    'p_feedback': '//a[contains(text(), "Positive")]/span/text()',
+    'n_feedback': '//a[contains(text(), "Negative")]/span/text()',
     's_from': '//label[contains(text(), "Ships from:")]/../../td/text()',
     's_to': '//label[contains(text(), "Ships to:")]/../../td/text()',
     'description': '//h5[contains(text(),"Description")]/../div/text()'
@@ -26,24 +29,25 @@ COLUMN = {
     'TITLE_COL': 'F',
     'QUANTITY_COL': 'G',
     'PRICE_COL': 'H',
-    'TRANS_COL': 'I',
+    'FEEDBACK_COL': 'I',
     'S_FROM_COL': 'J',
     'S_TO_COL': 'K',
     'DESCRIPTION_COL': 'L'
 }
 
-class Listing:
-    pass
+# class Listing:
+#     pass
 
-class Market:
+# class Market:
     
-    def __init__(self, market_n):
-        self.marketN = market_n
+#     def __init__(self, market_n):
+#         self.marketN = market_n
     
-    def whichMarket(self):
-        print(f'Nombre: {self.marketN}')
-asap_market = Market('ASAP Market')
-asap_market.whichMarket()
+#     def whichMarket(self):
+#         pass
+#         print(f'Nombre: {self.marketN}')
+# asap_market = Market('ASAP Market')
+# asap_market.whichMarket()
 
 html_files = []
 for (dirpath, dirname, filenames) in os.walk(LISTINGS_PATH):
@@ -55,20 +59,27 @@ i = 0
 listings = []
 for file in html_files:
     tree = html.parse(file)
+
     market = re.search(r'(\w* Market)\.htm', file)[1]
+
     date = datetime.today().strftime('%d-%b-%Y')
+
     vendor = tree.xpath(ASAP_XPATHS['vendor'])[0]
     vendor = re.search(r'\w* ', vendor)[0]
     vendor = vendor[:-1]
+
     reference = tree.xpath(ASAP_XPATHS['reference'])[0]
     reference = re.search(r'\/*.*\/', reference)[0]
     url = f'http://asap2u4pvplnkzl7ecle45wajojnftja45wvovl3jrvhangeyq67ziid.onion{reference}'
+
     title = tree.xpath(ASAP_XPATHS['title'])[0]
+
     quantity = re.search(r'\d+\s*[gG]+', title)
     if not quantity:
         quantity = '!!!no quantity'
     else:
-        quantity = re.search(r'\d+', quantity[0])[0] + ' g'
+        quantity = re.search(r'\d+', quantity[0])[0]
+
     price = tree.xpath(ASAP_XPATHS['price'])
     if not price:
         price = '!!!no price'
@@ -79,14 +90,16 @@ for file in html_files:
         else:
             label_currency = re.search(r'\w{3}', price)[0]
             price = f'({label_currency}) {price}'
+
+    t_feedback = tree.xpath(ASAP_XPATHS['t_feedback'])[0]
+    p_feedback = tree.xpath(ASAP_XPATHS['p_feedback'])[0]
+    n_feedback = tree.xpath(ASAP_XPATHS['n_feedback'])[0]
+    feedback = f'{t_feedback} ({p_feedback}/{n_feedback})'
+
     s_from = tree.xpath(ASAP_XPATHS['s_from'])[0]
     s_to = tree.xpath(ASAP_XPATHS['s_to'])[0]
+
     description = tree.xpath(ASAP_XPATHS['description'])[0]
-    # print(file)
-    # print(title)
-    # print(quantity)
-    # print(vendor)
-    # print(price + '\n')
 
     listing = {
         'market': market,
@@ -96,6 +109,7 @@ for file in html_files:
         'title': title,
         'quantity': quantity,
         'price': price,
+        'feedback': feedback,
         's_from': s_from,
         's_to': s_to,
         'description': description
