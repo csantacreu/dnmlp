@@ -11,7 +11,7 @@ LISTINGS_PATH = './listings'
 ASAP_XPATHS = {
     'vendor': '//label[contains(text(),"Vendor:")]/../../td/a/text()',
     'reference': '//a[contains(text(),"Positive")]/@href',
-    'title': '/html/body/div/div[3]/div/div[1]/h4/text()',
+    'title': '//h4/text()',
     'price': '//label[contains(text(), "Price:")]/../../td/text()',
     't_feedback': '//a[contains(text(), "Total")]/span/text()',
     'p_feedback': '//a[contains(text(), "Positive")]/span/text()',
@@ -29,10 +29,12 @@ COLUMN = {
     'TITLE_COL': 'F',
     'QUANTITY_COL': 'G',
     'PRICE_COL': 'H',
-    'FEEDBACK_COL': 'I',
-    'S_FROM_COL': 'J',
-    'S_TO_COL': 'K',
-    'DESCRIPTION_COL': 'L'
+    'T_FEEDBACK_COL': 'I',
+    'P_FEEDBACK_COL': 'J',
+    'N_FEEDBACK_COL': 'K',
+    'S_FROM_COL': 'L',
+    'S_TO_COL': 'M',
+    'DESCRIPTION_COL': 'N'
 }
 
 # class Listing:
@@ -94,7 +96,6 @@ for file in html_files:
     t_feedback = tree.xpath(ASAP_XPATHS['t_feedback'])[0]
     p_feedback = tree.xpath(ASAP_XPATHS['p_feedback'])[0]
     n_feedback = tree.xpath(ASAP_XPATHS['n_feedback'])[0]
-    feedback = f'{t_feedback} ({p_feedback}/{n_feedback})'
 
     s_from = tree.xpath(ASAP_XPATHS['s_from'])[0]
     s_to = tree.xpath(ASAP_XPATHS['s_to'])[0]
@@ -109,7 +110,9 @@ for file in html_files:
         'title': title,
         'quantity': quantity,
         'price': price,
-        'feedback': feedback,
+        't_feedback': t_feedback,
+        'p_feedback': p_feedback,
+        'n_feedback': n_feedback,
         's_from': s_from,
         's_to': s_to,
         'description': description
