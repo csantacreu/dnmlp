@@ -1,25 +1,50 @@
-import os
-os.system('py -m pip install -r requirements.txt')
-import re
-from datetime import datetime
-from openpyxl import load_workbook
 from lxml import html
+from openpyxl import load_workbook
+from datetime import datetime
+import re
+import os
+# os.system('py -m pip install -r requirements.txt')
+
 
 EXCEL_FILE = 'data.xlsx'
 LISTINGS_PATH = './listings'
 # DESTINATIONS = ('Worldwide', 'European Union', 'United Kingdom')
-ASAP_XPATHS = {
-    'vendor': '//label[contains(text(),"Vendor:")]/../../td/a/text()',
-    'reference': '//a[contains(text(),"Positive")]/@href',
-    'title': '//h4/text()',
-    'price': '//label[contains(text(), "Price:")]/../../td/text()',
-    't_feedback': '//a[contains(text(), "Total")]/span/text()',
-    'p_feedback': '//a[contains(text(), "Positive")]/span/text()',
-    'n_feedback': '//a[contains(text(), "Negative")]/span/text()',
-    's_from': '//label[contains(text(), "Ships from:")]/../../td/text()',
-    's_to': '//label[contains(text(), "Ships to:")]/../../td/text()',
-    'description': '//h5[contains(text(),"Description")]/../div/text()'
-}
+XPATHS = {
+    'alphabay': {
+        'vendor': '//b/a[starts-with(@href,"user?u=")]/text()',
+        # 'reference': '//a[contains(text(),"Positive")]/@href',
+        'title': '//h1/text()',
+        'price': '//center/strong[contains(text(), "Purchase Price:")]/../b/text()',
+        # 't_feedback': '//a[contains(text(), "Total")]/span/text()',
+        # 'p_feedback': '//a[contains(text(), "Positive")]/span/text()',
+        # 'n_feedback': '//a[contains(text(), "Negative")]/span/text()',
+        's_from': '//b[contains(text(), "Origin Country")]/../following-sibling::td[1]/text()',
+        's_to': '//b[contains(text(), "Ships to")]/../following-sibling::td[1]/text()',
+        'description': '//div/h4/strong/text()'
+    }, 'asap': {
+        'vendor': '//label[contains(text(),"Vendor:")]/../../td/a/text()',
+        'reference': '//a[contains(text(),"Positive")]/@href',
+        'title': '//h4/text()',
+        'price': '//label[contains(text(), "Price:")]/../../td/text()',
+        't_feedback': '//a[contains(text(), "Total")]/span/text()',
+        'p_feedback': '//a[contains(text(), "Positive")]/span/text()',
+        'n_feedback': '//a[contains(text(), "Negative")]/span/text()',
+        's_from': '//label[contains(text(), "Ships from:")]/../../td/text()',
+        's_to': '//label[contains(text(), "Ships to:")]/../../td/text()',
+        'description': '//h5[contains(text(),"Description")]/../div/text()'
+    }, 'vice_city': {
+        'vendor': '//div[contains(@class,"listing_right")]/span/a[starts-with(@title,"Vendor")]/text()',
+        # 'reference': '//a[contains(text(),"Positive")]/@href',
+        'title': '//div[contains(@class,"listing_right")]/span/text()',
+        # 'price': '//label[contains(text(), "Price:")]/../../td/text()',
+        # 't_feedback': '//a[contains(text(), "Total")]/span/text()',
+        # 'p_feedback': '//a[contains(text(), "Positive")]/span/text()',
+        # 'n_feedback': '//a[contains(text(), "Negative")]/span/text()',
+        's_from': '//span[contains(text(), "Shipping From:")]/following-sibling::span[1]/text()',
+        's_to': '//span[contains(text(), "Shipping To:")]/following-sibling::span[1]/text()',
+        'description': '//div[contains(@class,"listing_info")]/p/text()'
+    }}
+
 COLUMN = {
     'MARKET_COL': 'A',
     'DATE_COL': 'B',
@@ -37,20 +62,6 @@ COLUMN = {
     'DESCRIPTION_COL': 'N'
 }
 
-# class Listing:
-#     pass
-
-# class Market:
-    
-#     def __init__(self, market_n):
-#         self.marketN = market_n
-    
-#     def whichMarket(self):
-#         pass
-#         print(f'Nombre: {self.marketN}')
-# asap_market = Market('ASAP Market')
-# asap_market.whichMarket()
-
 html_files = []
 for (dirpath, dirname, filenames) in os.walk(LISTINGS_PATH):
     for file_name in filenames:
@@ -61,20 +72,18 @@ i = 0
 listings = []
 for file in html_files:
     tree = html.parse(file)
-
-    market = re.search(r'(\w* Market)\.htm', file)[1]
-
+    market = file.split(os.path.sep)[-2]
+    xpath = XPATHS[market]
     date = datetime.today().strftime('%d-%b-%Y')
 
-    vendor = tree.xpath(ASAP_XPATHS['vendor'])[0]
-    vendor = re.search(r'\w* ', vendor)[0]
-    vendor = vendor[:-1]
+    vendor = tree.xpath(xpath['vendor'])[0]
+    vendor = re.search(r'\w*', vendor)[0]
 
-    reference = tree.xpath(ASAP_XPATHS['reference'])[0]
-    reference = re.search(r'\/*.*\/', reference)[0]
-    url = f'http://asap2u4pvplnkzl7ecle45wajojnftja45wvovl3jrvhangeyq67ziid.onion{reference}'
+    # reference = tree.xpath(xpath['reference'])[0]
+    # reference = re.search(r'\/*.*\/', reference)[0]
+    # url = f'http://asap2u4pvplnkzl7ecle45wajojnftja45wvovl3jrvhangeyq67ziid.onion{reference}'
 
-    title = tree.xpath(ASAP_XPATHS['title'])[0]
+    title = tree.xpath(xpath['title'])[0]
 
     quantity = re.search(r'\d+\s*[gG]+', title)
     if not quantity:
@@ -82,41 +91,41 @@ for file in html_files:
     else:
         quantity = re.search(r'\d+', quantity[0])[0]
 
-    price = tree.xpath(ASAP_XPATHS['price'])
-    if not price:
-        price = '!!!no price'
-    else:
-        price = price[0].translate({ord(i): None for i in '\n\r ,'})
-        if price.endswith('USD'):
-            price = re.search(r'\d+\.?\d*', price)[0] + ' USD'
-        else:
-            label_currency = re.search(r'\w{3}', price)[0]
-            price = f'({label_currency}) {price}'
+    # price = tree.xpath(xpath['price'])
+    # if not price:
+    #     price = '!!!no price'
+    # else:
+    #     price = price[0].translate({ord(i): None for i in '\n\r ,'})
+    #     if price.endswith('USD'):
+    #         price = re.search(r'\d+\.?\d*', price)[0] + ' USD'
+    #     else:
+    #         label_currency = re.search(r'\w{3}', price)[0]
+    #         price = f'({label_currency}) {price}'
 
-    t_feedback = tree.xpath(ASAP_XPATHS['t_feedback'])[0]
-    p_feedback = tree.xpath(ASAP_XPATHS['p_feedback'])[0]
-    n_feedback = tree.xpath(ASAP_XPATHS['n_feedback'])[0]
+    # t_feedback = tree.xpath(xpath['t_feedback'])[0]
+    # p_feedback = tree.xpath(xpath['p_feedback'])[0]
+    # n_feedback = tree.xpath(xpath['n_feedback'])[0]
 
-    s_from = tree.xpath(ASAP_XPATHS['s_from'])[0]
-    s_to = tree.xpath(ASAP_XPATHS['s_to'])[0]
+    s_from = tree.xpath(xpath['s_from'])[0]
+    s_to = tree.xpath(xpath['s_to'])[0]
 
-    description = tree.xpath(ASAP_XPATHS['description'])[0]
+    description = tree.xpath(xpath['description'])[0]
 
     listing = {
         'market': market,
         'date': date,
-        'vendor': vendor,
-        'url': url,
+        # 'vendor': vendor,
+        # 'url': url,
         'title': title,
-        'quantity': quantity,
-        'price': price,
-        't_feedback': t_feedback,
-        'p_feedback': p_feedback,
-        'n_feedback': n_feedback,
-        's_from': s_from,
-        's_to': s_to,
+        # 'quantity': quantity,
+        # 'price': price,
+        # 't_feedback': t_feedback,
+        # 'p_feedback': p_feedback,
+        # 'n_feedback': n_feedback,
+        # 's_from': s_from,
+        # 's_to': s_to,
         'description': description
-            }
+    }
     listings.append(listing)
 
 wb = load_workbook(filename=EXCEL_FILE)

@@ -1,1 +1,1 @@
-comprobar siempre precio
+if missing modules, install requirements.txt with [py -m pip install -r requirements.txt]
