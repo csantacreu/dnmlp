@@ -5,14 +5,13 @@ import re
 import os
 # os.system('py -m pip install -r requirements.txt')
 
-
 EXCEL_FILE = 'data.xlsx'
 LISTINGS_PATH = './listings'
 # DESTINATIONS = ('Worldwide', 'European Union', 'United Kingdom')
 XPATHS = {
     'alphabay': {
         'vendor': '//b/a[starts-with(@href,"user?u=")]/text()',
-        # 'reference': '//a[contains(text(),"Positive")]/@href',
+        'reference': '//a[starts-with(@href,"listing?id=")]/@href',
         'title': '//h1/text()',
         'price': '//center/strong[contains(text(), "Purchase Price:")]/../b/text()',
         # 't_feedback': '//a[contains(text(), "Total")]/span/text()',
@@ -79,9 +78,14 @@ for file in html_files:
     vendor = tree.xpath(xpath['vendor'])[0]
     vendor = re.search(r'\w*', vendor)[0]
 
-    # reference = tree.xpath(xpath['reference'])[0]
-    # reference = re.search(r'\/*.*\/', reference)[0]
-    # url = f'http://asap2u4pvplnkzl7ecle45wajojnftja45wvovl3jrvhangeyq67ziid.onion{reference}'
+    if market == 'alphabay':
+        reference = tree.xpath(xpath['reference'])[0]
+        reference = re.search(r'\?id=(\d*)', reference)[1]
+        url = f'http://alphabay522szl32u4ci5e3iokdsyth56ei7rwngr2wm7i5jo54j2eid.onion/{reference}'
+    elif market == 'asap':
+        reference = tree.xpath(xpath['reference'])[0]
+        reference = re.search(r'\/*.*\/', reference)[0]
+        url = f'http://asap2u4pvplnkzl7ecle45wajojnftja45wvovl3jrvhangeyq67ziid.onion{reference}'
 
     title = tree.xpath(xpath['title'])[0]
 
@@ -91,20 +95,23 @@ for file in html_files:
     else:
         quantity = re.search(r'\d+', quantity[0])[0]
 
-    # price = tree.xpath(xpath['price'])
-    # if not price:
-    #     price = '!!!no price'
-    # else:
-    #     price = price[0].translate({ord(i): None for i in '\n\r ,'})
-    #     if price.endswith('USD'):
-    #         price = re.search(r'\d+\.?\d*', price)[0] + ' USD'
-    #     else:
-    #         label_currency = re.search(r'\w{3}', price)[0]
-    #         price = f'({label_currency}) {price}'
+    price = tree.xpath(xpath['price'])
+    if not price:
+        price = '!!!no price'
+    else:
+        price = price[0].translate({ord(i): None for i in '\n\r ,'})
+        if price.endswith('USD'):
+            price = re.search(r'\d+\.?\d*', price)[0] + ' USD'
+        else:
+            label_currency = re.search(r'\w{3}', price)[0]
+            price = f'({label_currency}) {price}'
 
-    # t_feedback = tree.xpath(xpath['t_feedback'])[0]
-    # p_feedback = tree.xpath(xpath['p_feedback'])[0]
-    # n_feedback = tree.xpath(xpath['n_feedback'])[0]
+    if market == 'alphabay':
+        pass
+    else:
+        t_feedback = tree.xpath(xpath['t_feedback'])[0]
+        p_feedback = tree.xpath(xpath['p_feedback'])[0]
+        n_feedback = tree.xpath(xpath['n_feedback'])[0]
 
     s_from = tree.xpath(xpath['s_from'])[0]
     s_to = tree.xpath(xpath['s_to'])[0]
@@ -114,16 +121,16 @@ for file in html_files:
     listing = {
         'market': market,
         'date': date,
-        # 'vendor': vendor,
-        # 'url': url,
+        'vendor': vendor,
+        'url': url,
         'title': title,
         # 'quantity': quantity,
-        # 'price': price,
+        'price': price,
         # 't_feedback': t_feedback,
         # 'p_feedback': p_feedback,
         # 'n_feedback': n_feedback,
-        # 's_from': s_from,
-        # 's_to': s_to,
+        's_from': s_from,
+        's_to': s_to,
         'description': description
     }
     listings.append(listing)
